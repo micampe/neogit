@@ -391,8 +391,9 @@ end
 ---@field preview_buffer? NeogitConfigPopup Preview options
 ---@field popup? NeogitConfigPopup Set the default way of opening popups
 ---@field signs? NeogitConfigSigns Signs used for toggled regions
----@field integrations? { diffview: boolean, codediff: boolean, telescope: boolean, fzf_lua: boolean, mini_pick: boolean, snacks: boolean } Which integrations to enable
----@field diff_viewer? "diffview"|"codediff"|nil Which diff viewer to use (nil = auto-detect)
+---@field integrations? { diffview: boolean, codediff: boolean, diffs: boolean, telescope: boolean, fzf_lua: boolean, mini_pick: boolean, snacks: boolean } Which integrations to enable
+---@field diff_viewer? "diffview"|"codediff"|"diffs"|nil Which diff viewer to use (nil = auto-detect)
+---@field diff_viewer_opts? { split?: "vertical"|"horizontal", rail_style?: "single"|"dual" } Options for the diff viewer (currently only the "diffs" viewer honors these; diffview/codediff manage their own windows)
 ---@field sections? NeogitConfigSections
 ---@field ignored_settings? string[] Settings to never persist, format: "Filetype--cli-value", i.e. "NeogitCommitPopup--author"
 ---@field mappings? NeogitConfigMappings
@@ -553,11 +554,15 @@ function M.get_default_values()
       telescope = nil,
       diffview = nil,
       codediff = nil,
+      diffs = nil,
       fzf_lua = nil,
       mini_pick = nil,
       snacks = nil,
     },
     diff_viewer = nil,
+    diff_viewer_opts = {
+      split = "vertical",
+    },
     sections = {
       sequencer = {
         folded = false,
@@ -786,6 +791,21 @@ function M.validate_config()
     return true
   end
 
+  ---Validates that `value` is one of `valid_values`. A nil `value` passes.
+  local function validate_enum(value, name, valid_values)
+    if value ~= nil and not vim.tbl_contains(valid_values, value) then
+      err(
+        name,
+        string.format(
+          "Expected `%s` to be one of %s, got '%s'",
+          name,
+          table.concat(valid_values, ", "),
+          tostring(value)
+        )
+      )
+    end
+  end
+
   -- More complex validation functions go below
   local function validate_kind(val, name)
     if
@@ -873,25 +893,25 @@ function M.validate_config()
   end
 
   local function validate_diff_viewer()
-    if config.diff_viewer == nil then
+    validate_enum(config.diff_viewer, "diff_viewer", { "diffview", "codediff", "diffs" })
+  end
+
+  local function validate_diff_viewer_opts()
+    if config.diff_viewer_opts == nil then
       return
     end
 
-    local valid_viewers = { "diffview", "codediff" }
-    if not vim.tbl_contains(valid_viewers, config.diff_viewer) then
-      err(
-        "diff_viewer",
-        string.format(
-          "Expected diff_viewer to be one of %s or nil, got '%s'",
-          table.concat(valid_viewers, ", "),
-          tostring(config.diff_viewer)
-        )
-      )
+    if not validate_type(config.diff_viewer_opts, "diff_viewer_opts", "table") then
+      return
     end
+
+    validate_enum(config.diff_viewer_opts.split, "diff_viewer_opts.split", { "vertical", "horizontal" })
+    validate_enum(config.diff_viewer_opts.rail_style, "diff_viewer_opts.rail_style", { "single", "dual" })
   end
 
   local function validate_integrations()
-    local valid_integrations = { "diffview", "codediff", "telescope", "fzf_lua", "mini_pick", "snacks" }
+    local valid_integrations =
+      { "diffview", "codediff", "diffs", "telescope", "fzf_lua", "mini_pick", "snacks" }
     if not validate_type(config.integrations, "integrations", "table") or #config.integrations == 0 then
       return
     end
@@ -1314,6 +1334,7 @@ function M.validate_config()
 
     validate_integrations()
     validate_diff_viewer()
+    validate_diff_viewer_opts()
     validate_sections()
     validate_ignored_settings()
     validate_mappings()
@@ -1346,7 +1367,7 @@ function M.check_integration(name)
 end
 
 ---Returns the configured diff viewer, or auto-detects if not set
----@return string|nil The diff viewer to use ("diffview", "codediff"), or nil if none available
+---@return string|nil The diff viewer to use ("diffview", "codediff", "diffs"), or nil if none available
 function M.get_diff_viewer()
   local logger = require("neogit.logger")
   local viewer = M.values.diff_viewer
@@ -1361,14 +1382,30 @@ function M.get_diff_viewer()
     end
   end
 
-  -- Auto-detect: try diffview first (backwards compatible), then codediff
+  -- Auto-detect: try diffview first (backwards compatible), then codediff, then diffs
   if M.check_integration("diffview") then
     return "diffview"
   elseif M.check_integration("codediff") then
     return "codediff"
+  elseif M.check_integration("diffs") then
+    return "diffs"
   end
 
   return nil
+end
+
+---Returns the integration module for the configured diff viewer, or nil if none
+---is available.
+---@return table|nil
+function M.get_diff_integration()
+  local viewer = M.get_diff_viewer()
+  if viewer == "codediff" then
+    return require("neogit.integrations.codediff")
+  elseif viewer == "diffs" then
+    return require("neogit.integrations.diffs")
+  elseif viewer == "diffview" then
+    return require("neogit.integrations.diffview")
+  end
 end
 
 function M.setup(opts)

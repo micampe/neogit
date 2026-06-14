@@ -297,6 +297,11 @@ to Neovim users.
         -- Requires you to have `esmuellert/codediff.nvim` installed.
         codediff = nil,
 
+        -- Alternative diff viewer integration. Diffs are shown as unified/review
+        -- buffers, with the changed files listed in the location and quickfix lists.
+        -- Requires you to have `barrettruth/diffs.nvim` installed.
+        diffs = nil,
+
         -- If enabled, uses fzf-lua for menu selection. If the telescope integration
         -- is also selected then telescope is used instead
         -- Requires you to have `ibhagwan/fzf-lua` installed.
@@ -312,9 +317,17 @@ to Neovim users.
         -- Requires you to have `folke/snacks.nvim` installed.
         snacks = nil,
     },
-    -- Which diff viewer to use. nil = auto-detect (tries diffview first, then codediff).
-    -- Can be "diffview" or "codediff".
+    -- Which diff viewer to use. nil = auto-detect (tries diffview first, then codediff, then diffs).
+    -- Can be "diffview", "codediff", or "diffs".
     diff_viewer = nil,
+    -- Options for the diff viewer. Currently only the "diffs" viewer honors these;
+    -- diffview and codediff manage their own windows.
+    diff_viewer_opts = {
+        -- Split direction: "vertical" (default) or "horizontal".
+        split = "vertical",
+        -- File-list rail style for the "diffs" viewer: "single" (default) or "dual".
+        rail_style = "single",
+    },
     sections = {
         -- Reverting/Cherry Picking
         sequencer = {
@@ -1465,6 +1478,7 @@ For these actions to become available, Neogit needs to have a diff viewer
 integration enabled. Supported viewers are:
 - `diffview.nvim`: https://github.com/sindrets/diffview.nvim
 - `codediff.nvim`: https://github.com/esmuellert/codediff.nvim
+- `diffs.nvim`: https://github.com/barrettruth/diffs.nvim
 
 By default, Neogit will auto-detect which viewer is available. You can
 explicitly set the viewer with the `diff_viewer` option. See |neogit_setup_plugin|.

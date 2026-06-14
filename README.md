@@ -35,6 +35,7 @@ Here's an example spec for [Lazy](https://github.com/folke/lazy.nvim), but you'r
     -- Only one of these is needed.
     "sindrets/diffview.nvim",        -- optional
     "esmuellert/codediff.nvim",      -- optional
+    "barrettruth/diffs.nvim",        -- optional
 
     -- For a custom log pager
     "m00qek/baleia.nvim",            -- optional
@@ -328,15 +329,18 @@ neogit.setup {
     -- If enabled, use telescope for menu selection rather than vim.ui.select.
     -- Allows multi-select and some things that vim.ui.select doesn't.
     telescope = nil,
-    -- Neogit only provides inline diffs. If you want a more traditional way to look at diffs, you can use `diffview`.
-    -- The diffview integration enables the diff popup.
-    --
+
+    -- Neogit only provides inline diffs. If you want a more traditional way to look at diffs,
+    -- you can install an alternative diff viewer.
+
     -- Requires you to have `sindrets/diffview.nvim` installed.
     diffview = nil,
 
-    -- Alternative diff viewer integration.
     -- Requires you to have `esmuellert/codediff.nvim` installed.
     codediff = nil,
+
+    -- Requires you to have `barrettruth/diffs.nvim` installed.
+    diffs = nil,
 
     -- If enabled, uses fzf-lua for menu selection. If the telescope integration
     -- is also selected then telescope is used instead
@@ -353,9 +357,17 @@ neogit.setup {
     -- Requires you to have `folke/snacks.nvim` installed.
     snacks = nil,
   },
-  -- Which diff viewer to use. nil = auto-detect (tries diffview first, then codediff).
-  -- Can be "diffview" or "codediff".
+  -- Which diff viewer to use. nil = auto-detect (tries diffview first, then codediff, then diffs).
+  -- Can be "diffview", "codediff", or "diffs".
   diff_viewer = nil,
+  -- Options for the diff viewer. Currently only the "diffs" viewer honors these;
+  -- diffview and codediff manage their own windows.
+  diff_viewer_opts = {
+    -- Split direction: "vertical" (default) or "horizontal".
+    split = "vertical",
+    -- File-list rail style for the "diffs" viewer: "single" (default) or "dual".
+    rail_style = "single",
+  },
   sections = {
     -- Reverting/Cherry Picking
     sequencer = {
